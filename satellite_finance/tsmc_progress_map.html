@@ -1,204 +1,250 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-    
-            <meta name="viewport" content="width=device-width,
-                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-            <style>
-                #map_94be3da10196a63e6a48d9ea95ccf4af {
-                    position: relative;
-                    width: 100.0%;
-                    height: 100.0%;
-                    left: 0.0%;
-                    top: 0.0%;
-                }
-                .leaflet-container { font-size: 1rem; }
-            </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TSMC Kumamoto – Construction Progress Map</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
 
-            <style>html, body {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-            }
-            </style>
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 300px;
+      min-width: 300px;
+      background: #1a1d27;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      overflow-y: auto;
+      z-index: 1000;
+      border-right: 1px solid #2e3045;
+    }
+    #sidebar h1 { font-size: 15px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
+    #sidebar .subtitle { font-size: 11px; color: #7a7f9a; margin-bottom: 20px; }
 
-            <style>#map {
-                position:absolute;
-                top:0;
-                bottom:0;
-                right:0;
-                left:0;
-                }
-            </style>
+    /* Period buttons */
+    .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #7a7f9a; margin-bottom: 8px; }
+    .period-btn {
+      display: block; width: 100%; text-align: left;
+      background: #252836; border: 1px solid #2e3045;
+      color: #c0c4d8; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 8px;
+      cursor: pointer; transition: all 0.2s;
+      font-size: 13px;
+    }
+    .period-btn:hover { background: #2e3350; border-color: #4a90d9; }
+    .period-btn.active { background: #1e3a5f; border-color: #4a90d9; color: #fff; }
+    .period-btn .year { font-size: 16px; font-weight: 700; color: #4a90d9; display: block; }
+    .period-btn .label { font-size: 11px; color: #9a9fb8; }
 
-            <script>
-                L_NO_TOUCH = false;
-                L_DISABLE_3D = false;
-            </script>
+    /* Index cards */
+    .divider { border: none; border-top: 1px solid #2e3045; margin: 16px 0; }
+    .index-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .index-card {
+      background: #252836; border-radius: 8px; padding: 10px 8px; text-align: center;
+      border: 1px solid #2e3045;
+    }
+    .index-card .idx-name { font-size: 10px; color: #7a7f9a; text-transform: uppercase; letter-spacing: 0.5px; }
+    .index-card .idx-val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .ndvi-color { color: #4caf50; }
+    .ndbi-color { color: #ff9800; }
+    .bsi-color  { color: #f44336; }
 
-        
+    /* Trend bar */
+    .trend-section { margin-top: 4px; }
+    .trend-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+    .trend-label { width: 36px; font-size: 10px; color: #7a7f9a; text-align: right; }
+    .trend-bar-bg { flex: 1; background: #252836; border-radius: 4px; height: 8px; overflow: hidden; }
+    .trend-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+    .trend-val { width: 44px; font-size: 10px; color: #c0c4d8; text-align: right; }
+
+    /* Legend */
+    .legend { margin-top: 16px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; color: #9a9fb8; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+    /* ── Map ── */
+    #map { flex: 1; }
+
+    /* Info popup override */
+    .leaflet-popup-content-wrapper { background: #1a1d27; color: #e0e0e0; border: 1px solid #2e3045; border-radius: 8px; }
+    .leaflet-popup-tip { background: #1a1d27; }
+  </style>
 </head>
 <body>
-    
-    
-            <div class="folium-map" id="map_94be3da10196a63e6a48d9ea95ccf4af" ></div>
-        
-</body>
+
+<div id="sidebar">
+  <h1>TSMC Kumamoto Plant</h1>
+  <div class="subtitle">Construction Progress · Satellite Indices</div>
+
+  <div class="section-title">Select Period</div>
+
+  <button class="period-btn active" onclick="selectPeriod(0)">
+    <span class="year">2020</span>
+    <span class="label">Spring · Before Construction</span>
+  </button>
+  <button class="period-btn" onclick="selectPeriod(1)">
+    <span class="year">2022</span>
+    <span class="label">Autumn · Land Grading</span>
+  </button>
+  <button class="period-btn" onclick="selectPeriod(2)">
+    <span class="year">2024</span>
+    <span class="label">Spring · Building Complete</span>
+  </button>
+  <button class="period-btn" onclick="selectPeriod(3)">
+    <span class="year">2025</span>
+    <span class="label">Autumn · Mass Production</span>
+  </button>
+
+  <hr class="divider" />
+  <div class="section-title">Indices (Polygon Mean)</div>
+
+  <div class="index-grid">
+    <div class="index-card">
+      <div class="idx-name">NDVI</div>
+      <div class="idx-val ndvi-color" id="val-ndvi">–</div>
+    </div>
+    <div class="index-card">
+      <div class="idx-name">NDBI</div>
+      <div class="idx-val ndbi-color" id="val-ndbi">–</div>
+    </div>
+    <div class="index-card">
+      <div class="idx-name">BSI</div>
+      <div class="idx-val bsi-color" id="val-bsi">–</div>
+    </div>
+  </div>
+
+  <div class="section-title">Trend</div>
+  <div class="trend-section" id="trend-section"></div>
+
+  <hr class="divider" />
+  <div class="section-title">Legend</div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4caf50"></div>NDVI: Vegetation (high = green)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff9800"></div>NDBI: Built-up area (high = urban)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div>BSI: Bare soil (high = exposed ground)</div>
+  </div>
+</div>
+
+<div id="map"></div>
+
 <script>
-    
-    
-            var map_94be3da10196a63e6a48d9ea95ccf4af = L.map(
-                "map_94be3da10196a63e6a48d9ea95ccf4af",
-                {
-                    center: [32.8803, 130.8244],
-                    crs: L.CRS.EPSG3857,
-                    ...{
-  "zoom": 15,
-  "zoomControl": true,
-  "preferCanvas": false,
+const DATA = [
+  { period: "2020_spring_before_construction", year: 2020,
+    NDVI: 0.5243, NDBI: -0.0457, BSI: -0.0173 },
+  { period: "2022_autumn_grading", year: 2022,
+    NDVI: 0.3754, NDBI:  0.0016, BSI:  0.0249 },
+  { period: "2024_spring_building_complete", year: 2024,
+    NDVI: 0.3543, NDBI: -0.0250, BSI:  0.0065 },
+  { period: "2025_autumn_mass_production", year: 2025,
+    NDVI: 0.1987, NDBI:  0.0108, BSI:  0.0584 },
+];
+
+const POLYGON_COORDS = [
+  [32.88629289439438, 130.8387506021983],
+  [32.88864887943977, 130.84436183641313],
+  [32.88997578596905, 130.85071478549534],
+  [32.89084232644546, 130.8503923007704],
+  [32.89103188104491, 130.85148874883535],
+  [32.88959667184557, 130.85194022745034],
+  [32.889515432893766, 130.85139200341783],
+  [32.88594084527246, 130.85181123356034],
+  [32.88374727692937, 130.83923432928577],
+  [32.88629289439438, 130.8387506021983],
+];
+
+// ── Map init ────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([32.8875, 130.8455], 15);
+
+// Base layer (shown outside overlay area)
+L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Esri World Imagery', maxZoom: 19 }
+).addTo(map);
+
+// GeoTIFF image bounds
+const IMG_BOUNDS = [[32.877082, 130.832435], [32.895138, 130.853815]];
+
+// Satellite image overlays (one per period)
+const OVERLAYS = {
+  0: L.imageOverlay('tsmc_geotiff/png/2020.png', IMG_BOUNDS, { opacity: 0.9 }),
+  1: L.imageOverlay('tsmc_geotiff/png/2022.png', IMG_BOUNDS, { opacity: 0.9 }),
+  2: L.imageOverlay('tsmc_geotiff/png/2024.png', IMG_BOUNDS, { opacity: 0.9 }),
+  3: L.imageOverlay('tsmc_geotiff/png/2025.png', IMG_BOUNDS, { opacity: 0.9 }),
+};
+let currentOverlay = null;
+
+// NDVI color scale: green → yellow → red
+function ndviColor(val) {
+  if (val > 0.45) return '#2e7d32';
+  if (val > 0.35) return '#66bb6a';
+  if (val > 0.25) return '#ffeb3b';
+  return '#ef5350';
 }
 
-                }
-            );
+let polygon = null;
 
-            
+function selectPeriod(idx) {
+  // Button highlight
+  document.querySelectorAll('.period-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
 
-        
-    
-            var tile_layer_f7dcff7c7a08578bd40aecf74983d152 = L.tileLayer(
-                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-  "minZoom": 0,
-  "maxZoom": 19,
-  "maxNativeZoom": 19,
-  "noWrap": false,
-  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
+  const d = DATA[idx];
+
+  // Update cards
+  document.getElementById('val-ndvi').textContent = d.NDVI.toFixed(4);
+  document.getElementById('val-ndbi').textContent = d.NDBI.toFixed(4);
+  document.getElementById('val-bsi').textContent  = d.BSI.toFixed(4);
+
+  // Update trend bars
+  const ndviMax = 0.6, ndbiRange = 0.1, bsiRange = 0.08;
+  const section = document.getElementById('trend-section');
+  section.innerHTML = `
+    ${trendRow('NDVI', d.NDVI, 0, ndviMax, '#4caf50')}
+    ${trendRow('NDBI', d.NDBI, -0.06, 0.06, '#ff9800')}
+    ${trendRow('BSI',  d.BSI,  -0.03, 0.07, '#f44336')}
+  `;
+
+  // Update satellite image overlay
+  if (currentOverlay) map.removeLayer(currentOverlay);
+  currentOverlay = OVERLAYS[idx];
+  currentOverlay.addTo(map);
+
+  // Update polygon
+  if (polygon) map.removeLayer(polygon);
+  polygon = L.polygon(POLYGON_COORDS, {
+    color: ndviColor(d.NDVI),
+    weight: 2,
+    fillColor: ndviColor(d.NDVI),
+    fillOpacity: 0.35,
+  }).addTo(map);
+
+  polygon.bindPopup(`
+    <b>${d.year} – ${d.period.replace(/_/g,' ')}</b><br/>
+    NDVI: <b style="color:#4caf50">${d.NDVI}</b><br/>
+    NDBI: <b style="color:#ff9800">${d.NDBI}</b><br/>
+    BSI:  <b style="color:#f44336">${d.BSI}</b>
+  `);
 }
 
-            );
-        
-    
-            tile_layer_f7dcff7c7a08578bd40aecf74983d152.addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-        
-    
-            var tile_layer_5d0b571af4081f15e26e9fe3d2d91d16 = L.tileLayer(
-                "https://earthengine.googleapis.com/v1/projects/time-management-app-483902/maps/a178e1ad98282780270221bf96c7a9cc-4f6402bf9c091950e932dd50a675029e/tiles/{z}/{x}/{y}",
-                {
-  "minZoom": 0,
-  "maxZoom": 18,
-  "maxNativeZoom": 18,
-  "noWrap": false,
-  "attribution": "Map Data \u0026copy; Google Earth Engine",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
+function trendRow(name, val, min, max, color) {
+  const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+  return `
+    <div class="trend-row">
+      <div class="trend-label">${name}</div>
+      <div class="trend-bar-bg">
+        <div class="trend-bar" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div class="trend-val">${val.toFixed(4)}</div>
+    </div>`;
 }
 
-            );
-        
-    
-            tile_layer_5d0b571af4081f15e26e9fe3d2d91d16.addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-        
-    
-            var tile_layer_1b927db18c4999cefd5a72739752b94e = L.tileLayer(
-                "https://earthengine.googleapis.com/v1/projects/time-management-app-483902/maps/bc86fcdc2c3ead047e7c0af0b566a1e1-05671cbe9fba5730efa58a9d2bacee4e/tiles/{z}/{x}/{y}",
-                {
-  "minZoom": 0,
-  "maxZoom": 18,
-  "maxNativeZoom": 18,
-  "noWrap": false,
-  "attribution": "Map Data \u0026copy; Google Earth Engine",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
-}
-
-            );
-        
-    
-            tile_layer_1b927db18c4999cefd5a72739752b94e.addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-        
-    
-            var tile_layer_61a1f4eeed8a2ee669ff3bb5d8b6a864 = L.tileLayer(
-                "https://earthengine.googleapis.com/v1/projects/time-management-app-483902/maps/dede5e3cc1fbd83dc45ed5b831761ec7-6dd730b0f9d7d767e1618e4204a01b41/tiles/{z}/{x}/{y}",
-                {
-  "minZoom": 0,
-  "maxZoom": 18,
-  "maxNativeZoom": 18,
-  "noWrap": false,
-  "attribution": "Map Data \u0026copy; Google Earth Engine",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
-}
-
-            );
-        
-    
-            tile_layer_61a1f4eeed8a2ee669ff3bb5d8b6a864.addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-        
-    
-            var tile_layer_0e7c67b11d254e3d2f025b80c056c2ec = L.tileLayer(
-                "https://earthengine.googleapis.com/v1/projects/time-management-app-483902/maps/d285d86346a77307f3be5ebb5aac7fdb-62b7652e194d91a799add493eebfa159/tiles/{z}/{x}/{y}",
-                {
-  "minZoom": 0,
-  "maxZoom": 18,
-  "maxNativeZoom": 18,
-  "noWrap": false,
-  "attribution": "Map Data \u0026copy; Google Earth Engine",
-  "subdomains": "abc",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
-}
-
-            );
-        
-    
-            tile_layer_0e7c67b11d254e3d2f025b80c056c2ec.addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-        
-    
-            var layer_control_b28417e1181488b0118688922580917f_layers = {
-                base_layers : {
-                    "openstreetmap" : tile_layer_f7dcff7c7a08578bd40aecf74983d152,
-                },
-                overlays :  {
-                    "2020\u5e74\u6625 (\u5efa\u8a2d\u524d)" : tile_layer_5d0b571af4081f15e26e9fe3d2d91d16,
-                    "2022\u5e74\u6625 (\u9020\u6210\u671f)" : tile_layer_1b927db18c4999cefd5a72739752b94e,
-                    "2024\u5e74\u6625 (\u5b8c\u6210\u671f)" : tile_layer_61a1f4eeed8a2ee669ff3bb5d8b6a864,
-                    "2025\u5e74\u6625 (\u91cf\u7523\u958b\u59cb\u5f8c)" : tile_layer_0e7c67b11d254e3d2f025b80c056c2ec,
-                },
-            };
-            let layer_control_b28417e1181488b0118688922580917f = L.control.layers(
-                layer_control_b28417e1181488b0118688922580917f_layers.base_layers,
-                layer_control_b28417e1181488b0118688922580917f_layers.overlays,
-                {
-  "position": "topright",
-  "collapsed": true,
-  "autoZIndex": true,
-}
-            ).addTo(map_94be3da10196a63e6a48d9ea95ccf4af);
-
-        
+// Init with first period
+selectPeriod(0);
 </script>
+</body>
 </html>
